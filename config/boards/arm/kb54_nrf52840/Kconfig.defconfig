@@ -3,7 +3,7 @@ if BOARD_KB54_NRF52840_L
 config BOARD
     default "kb54_nrf52840_l"
 
-config ZMK_SPLIT_BLE_ROLE_CENTRAL
+config ZMK_SPLIT_ROLE_CENTRAL
     default y
 
 endif # BOARD_KB54_NRF52840_L
