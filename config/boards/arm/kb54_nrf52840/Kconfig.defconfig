@@ -60,8 +60,9 @@ config MPU_ALLOW_FLASH_WRITE
 config NVS
     default y
 
-config SETTINGS_NVS
-    default y
+choice SETTINGS_BACKEND
+    default SETTINGS_NVS
+endchoice
 
 config FLASH
     default y
