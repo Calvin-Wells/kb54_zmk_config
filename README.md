@@ -34,7 +34,13 @@ If pairing fails or you need a clean slate:
 5. Remove the keyboard from your computer's Bluetooth device list
 6. Re-pair
 
-While connected, press `BT_CLR` on the lower layer to clear the current BLE profile without rebuilding.
+To clear just the current BLE profile without rebuilding, hold LWR + RSE (Adjust layer) and press `BT_CLR`.
+
+## ZMK Studio
+
+The left half is built with ZMK Studio over USB and BLE. Open https://zmk.studio, connect, then unlock with LWR + RSE + the Studio unlock key.
+
+Keymap changes made in Studio are stored on the keyboard and take precedence over `config/kb54_nrf52840.keymap`. After flashing a changed keymap file, use "Restore Stock Settings" in Studio for it to take effect.
 
 ## Changing ZMK Version
 
