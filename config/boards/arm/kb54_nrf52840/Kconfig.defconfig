@@ -6,6 +6,10 @@ config BOARD
 config ZMK_SPLIT_ROLE_CENTRAL
     default y
 
+# USB HID output; ZMK only allows this on the central half.
+config ZMK_USB
+    default y
+
 endif # BOARD_KB54_NRF52840_L
 
 
@@ -28,10 +32,6 @@ config BT_CTLR
     default BT
 
 config PINCTRL
-    default y
-
-# Enable both USB and BLE
-config ZMK_USB
     default y
 
 config ZMK_BLE
