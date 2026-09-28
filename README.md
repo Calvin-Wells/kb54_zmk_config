@@ -5,8 +5,8 @@ ZMK firmware configuration for the Human Computing KB54, a split wireless keyboa
 ## Repo Layout
 
 - `config/kb54_nrf52840.keymap` — Keymap definition
-- `config/boards/arm/kb54_nrf52840/` — Custom board definition and display widgets
-- `config/west.yml` — ZMK version pinned to v0.3 (set revision here)
+- `config/boards/humancomputing/kb54/` — Custom board definition and display widgets
+- `config/west.yml` — ZMK version pinned to a `main` commit SHA (set revision here)
 - `.github/workflows/build.yml` — CI build configuration (keep ZMK version in sync with west.yml)
 - `build.yaml` — Build targets and optional settings_reset entries
 
@@ -48,6 +48,6 @@ Update both:
 - `config/west.yml` — set the `revision` field
 - `.github/workflows/build.yml` — set the `@ref` field
 
-Keep these in sync. ZMK v0.3 uses Zephyr 3.x; newer versions may use Zephyr 4.1, which the board definition does not yet support.
+Keep these in sync — both should point to the same ZMK `main` commit SHA. The board definition targets ZMK `main` on Zephyr 4.1 (HWMv2); it no longer supports the old `v0.3`/Zephyr 3.5 board format.
 
 See https://zmk.dev/docs for general ZMK documentation.

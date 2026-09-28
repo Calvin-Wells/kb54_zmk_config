@@ -3,6 +3,7 @@
 
 /dts-v1/;
 #include <nordic/nrf52840_qiaa.dtsi>
+#include <common/nordic/nrf52840_uf2_boot_mode.dtsi>
 #include "kb54_nrf52840-pinctrl.dtsi"
 
 #include <dt-bindings/zmk/matrix_transform.h>
@@ -249,4 +250,9 @@
 
 &uicr {
   nfct-pins-as-gpios;
+};
+
+// Non-high-voltage DC/DC converter mode (inductor on the DCC pin).
+&reg1 {
+	regulator-initial-mode = <NRF5X_REG_MODE_DCDC>;
 };

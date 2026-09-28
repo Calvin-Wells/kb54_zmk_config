@@ -12,16 +12,32 @@
 #include <zephyr/drivers/gpio.h>
 #endif
 
-void rotate_canvas(lv_obj_t *canvas, lv_color_t *cbuf) {
-    static lv_color_t cbuf_tmp[CANVAS_SIZE * CANVAS_SIZE];
-    memcpy(cbuf_tmp, cbuf, sizeof(cbuf_tmp));
-    lv_img_dsc_t img;
-    img.data = (void *)cbuf_tmp;
-    img.header.cf = LV_IMG_CF_TRUE_COLOR;
-    img.header.w = CANVAS_SIZE;
-    img.header.h = CANVAS_SIZE;
-    lv_canvas_transform(canvas, &img, 1800, LV_IMG_ZOOM_NONE, 0, 0, CANVAS_SIZE / 2,
-                        CANVAS_SIZE / 2, false);
+void rotate_canvas(lv_obj_t *canvas) {
+    // Ported from nice!view's LVGL 9 util.c (app/boards/shields/nice_view/widgets/util.c on ZMK
+    // main): lv_canvas_transform() no longer exists in LVGL 9, so rotation is done directly on
+    // the canvas' own draw buffer with lv_draw_sw_rotate(). 180 degrees here (vs. nice!view's
+    // 270) because this display is mounted upside down rather than sideways.
+    uint8_t *buf = lv_canvas_get_draw_buf(canvas)->data;
+    static uint8_t buf_copy[CANVAS_BUF_SIZE];
+    memcpy(buf_copy, buf, sizeof(buf_copy));
+
+    const uint32_t stride = lv_draw_buf_width_to_stride(CANVAS_SIZE, CANVAS_COLOR_FORMAT);
+    lv_draw_sw_rotate(buf_copy, buf, CANVAS_SIZE, CANVAS_SIZE, stride, stride,
+                      LV_DISPLAY_ROTATION_180, CANVAS_COLOR_FORMAT);
+}
+
+void canvas_draw_text(lv_obj_t *canvas, lv_coord_t x, lv_coord_t y, lv_coord_t max_w,
+                      lv_draw_label_dsc_t *draw_dsc, const char *txt) {
+    // Ported from nice!view's LVGL 9 util.c: LVGL 9 removed lv_canvas_draw_text() in favor of
+    // drawing into a temporary layer with lv_draw_label().
+    lv_layer_t layer;
+    lv_canvas_init_layer(canvas, &layer);
+
+    draw_dsc->text = txt;
+    lv_area_t coords = {x, y, x + max_w, y + CANVAS_SIZE};
+    lv_draw_label(&layer, draw_dsc, &coords);
+
+    lv_canvas_finish_layer(canvas, &layer);
 }
 
 const char *zmk_widget_battery_symbol(uint8_t level, bool charging) {

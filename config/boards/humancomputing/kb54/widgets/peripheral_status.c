@@ -32,15 +32,15 @@ static void draw(struct zmk_widget_status *widget) {
         zmk_widget_battery_symbol(widget->state.battery, widget->state.charging);
     snprintf(battery_text_left, sizeof(battery_text_left), "%s %i%%", battery_symbol,
              widget->state.battery);
-    lv_canvas_draw_text(canvas, 0, 46, 128, &battery_label_left, battery_text_left);
+    canvas_draw_text(canvas, 0, 46, 128, &battery_label_left, battery_text_left);
 
     /////// PROFILE
     snprintf(connection_text, sizeof(connection_text), "%s",
              widget->state.connected ? (LV_SYMBOL_BLUETOOTH " " LV_SYMBOL_OK)
                                      : (LV_SYMBOL_BLUETOOTH " " LV_SYMBOL_CLOSE));
-    lv_canvas_draw_text(canvas, 0, CANVAS_SIZE - 32, 128, &connection_label, connection_text);
+    canvas_draw_text(canvas, 0, CANVAS_SIZE - 32, 128, &connection_label, connection_text);
 
-    rotate_canvas(canvas, widget->cbuf);
+    rotate_canvas(canvas);
 }
 
 //////////////////////////////// Battery ////////////////////////////////////
@@ -135,7 +135,7 @@ int zmk_widget_status_init(struct zmk_widget_status *widget, lv_obj_t *parent) {
     // Canvas.
     lv_obj_t *top = lv_canvas_create(widget->obj);
     lv_obj_align(top, LV_ALIGN_TOP_RIGHT, 0, 0);
-    lv_canvas_set_buffer(top, widget->cbuf, CANVAS_SIZE, CANVAS_SIZE, LV_IMG_CF_TRUE_COLOR);
+    lv_canvas_set_buffer(top, widget->cbuf, CANVAS_SIZE, CANVAS_SIZE, CANVAS_COLOR_FORMAT);
 
     // Peripheral.
     lv_draw_label_dsc_init(&connection_label);

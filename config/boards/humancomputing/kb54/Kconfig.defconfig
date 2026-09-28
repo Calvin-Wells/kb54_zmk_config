@@ -1,8 +1,5 @@
 if BOARD_KB54_NRF52840_L
 
-config BOARD
-    default "kb54_nrf52840_l"
-
 config ZMK_SPLIT_ROLE_CENTRAL
     default y
 
@@ -11,15 +8,6 @@ config ZMK_USB
     default y
 
 endif # BOARD_KB54_NRF52840_L
-
-
-
-if BOARD_KB54_NRF52840_R
-
-config BOARD
-    default "kb54_nrf52840_r"
-
-endif # BOARD_KB54_NRF52840_R
 
 
 
@@ -100,6 +88,10 @@ config ZMK_DISPLAY
 config ZMK_DISPLAY_BLANK_ON_IDLE
     default n
 
+# Sharp LCD VCOM toggle thread priority (same as nice!view)
+config LS0XX_VCOM_THREAD_PRIO
+    default 11
+
 # LVGL draw buffer size as % of the screen
 config LV_Z_VDB_SIZE
     default 100
@@ -125,14 +117,14 @@ choice ZMK_DISPLAY_STATUS_SCREEN
 endchoice
 
 config LV_Z_MEM_POOL_SIZE
-    default 4096 if ZMK_DISPLAY_STATUS_SCREEN_CUSTOM
+    default 8192 if ZMK_DISPLAY_STATUS_SCREEN_CUSTOM
 
 config ZMK_DISPLAY_STATUS_SCREEN_CUSTOM
     imply KB54_WIDGET_STATUS
 
 config KB54_WIDGET_STATUS
     bool "Custom KB54 status widget"
-    select LV_USE_IMG
+    select LV_USE_IMAGE
     select LV_USE_CANVAS
     select LV_FONT_MONTSERRAT_22
     select LV_FONT_MONTSERRAT_18
@@ -141,6 +133,12 @@ config KB54_WIDGET_STATUS
     select LV_FONT_MONTSERRAT_12
     select LV_FONT_UNSCII_8
     select LV_FONT_UNSCII_16
+
+# Adafruit nRF52 UF2 bootloader magic-value mapping for the &bootloader
+# behavior (boot retention set up via nrf52840_uf2_boot_mode.dtsi).
+choice ZMK_BOOTMODE_MAGIC_VALUE_BOOTLOADER_TYPE
+    default ZMK_BOOTMODE_MAGIC_VALUE_BOOTLOADER_TYPE_ADAFRUIT_NRF52
+endchoice
 
 # Code output
 config USE_DT_CODE_PARTITION

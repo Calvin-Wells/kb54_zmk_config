@@ -45,7 +45,7 @@ static void draw(struct zmk_widget_status *widget) {
     } else {
         snprintf(layer_text, sizeof(layer_text), "LAYER: %s", widget->state.layer_label);
     }
-    lv_canvas_draw_text(canvas, 0, 15, 128, &layer_label, layer_text);
+    canvas_draw_text(canvas, 0, 15, 128, &layer_label, layer_text);
 
     /////// Battery
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_FETCHING)
@@ -72,7 +72,7 @@ static void draw(struct zmk_widget_status *widget) {
     snprintf(battery_text_left, sizeof(battery_text_left), "%s %i%%", battery_symbol,
              widget->state.battery);
 #endif /* IS_ENABLED(CONFIG_ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_FETCHING) */
-    lv_canvas_draw_text(canvas, 0, 46, 128, &battery_label_left, battery_text_left);
+    canvas_draw_text(canvas, 0, 46, 128, &battery_label_left, battery_text_left);
 
     /////// PROFILE
     profile_label_left.align = LV_TEXT_ALIGN_LEFT;
@@ -98,12 +98,12 @@ static void draw(struct zmk_widget_status *widget) {
         }
         break;
     }
-    lv_canvas_draw_text(canvas, profile_text_padding, CANVAS_SIZE - 32, 128, &profile_label_left,
-                        profile_text_left);
-    lv_canvas_draw_text(canvas, -profile_text_padding, CANVAS_SIZE - 32, 128, &profile_label_right,
-                        profile_text_right);
+    canvas_draw_text(canvas, profile_text_padding, CANVAS_SIZE - 32, 128, &profile_label_left,
+                     profile_text_left);
+    canvas_draw_text(canvas, -profile_text_padding, CANVAS_SIZE - 32, 128, &profile_label_right,
+                     profile_text_right);
 
-    rotate_canvas(canvas, widget->cbuf);
+    rotate_canvas(canvas);
 }
 
 //////////////////////////////// Battery ////////////////////////////////////
@@ -235,7 +235,9 @@ static void output_status_update_cb(struct output_status_state state) {
 
 static struct output_status_state output_status_get_state(const zmk_event_t *_eh) {
     return (struct output_status_state){
-        .selected_endpoint = zmk_endpoints_selected(),
+        // zmk_endpoints_selected() was renamed to zmk_endpoint_get_selected() (see
+        // app/include/zmk/endpoints.h on ZMK main).
+        .selected_endpoint = zmk_endpoint_get_selected(),
         .active_profile_index = zmk_ble_active_profile_index(),
         .active_profile_connected = zmk_ble_active_profile_is_connected(),
         .active_profile_bonded = !zmk_ble_active_profile_is_open(),
@@ -269,7 +271,11 @@ static void layer_status_update_cb(struct layer_status_state state) {
 
 static struct layer_status_state layer_status_get_state(const zmk_event_t *eh) {
     uint8_t index = zmk_keymap_highest_layer_active();
-    return (struct layer_status_state){.index = index, .label = zmk_keymap_layer_name(index)};
+    // zmk_keymap_layer_name() now takes a stable layer ID rather than a positional index -- the
+    // two can differ, e.g. with CONFIG_ZMK_KEYMAP_LAYER_REORDERING (see app/include/zmk/keymap.h
+    // on ZMK main).
+    return (struct layer_status_state){
+        .index = index, .label = zmk_keymap_layer_name(zmk_keymap_layer_index_to_id(index))};
 }
 
 ZMK_DISPLAY_WIDGET_LISTENER(widget_layer_status, struct layer_status_state, layer_status_update_cb,
@@ -286,7 +292,7 @@ int zmk_widget_status_init(struct zmk_widget_status *widget, lv_obj_t *parent) {
     // Canvas.
     lv_obj_t *top = lv_canvas_create(widget->obj);
     lv_obj_align(top, LV_ALIGN_TOP_RIGHT, 0, 0);
-    lv_canvas_set_buffer(top, widget->cbuf, CANVAS_SIZE, CANVAS_SIZE, LV_IMG_CF_TRUE_COLOR);
+    lv_canvas_set_buffer(top, widget->cbuf, CANVAS_SIZE, CANVAS_SIZE, CANVAS_COLOR_FORMAT);
 
     // Layer.
     lv_draw_label_dsc_init(&layer_label);

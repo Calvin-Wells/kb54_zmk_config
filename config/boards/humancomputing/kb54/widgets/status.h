@@ -7,7 +7,9 @@
 struct zmk_widget_status {
     sys_snode_t node;
     lv_obj_t *obj;
-    lv_color_t cbuf[CANVAS_SIZE * CANVAS_SIZE];
+    // LVGL 9 canvas buffers are raw bytes sized/aligned via LV_CANVAS_BUF_SIZE, not lv_color_t
+    // arrays -- see CANVAS_BUF_SIZE / CANVAS_COLOR_FORMAT in util.h.
+    uint8_t cbuf[CANVAS_BUF_SIZE];
     struct status_state state;
 };
 

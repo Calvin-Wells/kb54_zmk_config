@@ -1,0 +1,9 @@
+boards:
+  - name: kb54_nrf52840_l
+    vendor: humancomputing
+    socs:
+      - name: nrf52840
+  - name: kb54_nrf52840_r
+    vendor: humancomputing
+    socs:
+      - name: nrf52840

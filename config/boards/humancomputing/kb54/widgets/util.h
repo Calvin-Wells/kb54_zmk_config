@@ -7,6 +7,15 @@
 
 #define CANVAS_SIZE 128
 
+// LVGL 9 canvas buffers are addressed by color format rather than lv_color_t, and must be sized
+// (and stride-aligned) via LV_CANVAS_BUF_SIZE. L8 is the smallest format lv_draw_sw_rotate
+// supports; the actual 1-bit Sharp memory LCD framebuffer conversion happens separately (see
+// LV_COLOR_DEPTH_1 / LV_Z_BITS_PER_PIXEL in Kconfig.defconfig).
+#define CANVAS_COLOR_FORMAT LV_COLOR_FORMAT_L8
+#define CANVAS_BUF_SIZE                                                                            \
+    LV_CANVAS_BUF_SIZE(CANVAS_SIZE, CANVAS_SIZE, LV_COLOR_FORMAT_GET_BPP(CANVAS_COLOR_FORMAT),     \
+                       LV_DRAW_BUF_STRIDE_ALIGN)
+
 struct status_state {
     uint8_t battery;
     bool charging;
@@ -49,7 +58,13 @@ struct peripheral_status_state {
     bool connected;
 };
 
-void rotate_canvas(lv_obj_t *canvas, lv_color_t *cbuf);
+// Rotates the canvas' own draw buffer 180 degrees in place (the display is mounted upside down).
+void rotate_canvas(lv_obj_t *canvas);
+
+// Draws text into the canvas via a temporary draw layer, mirroring the nice!view LVGL 9 helper of
+// the same name (app/boards/shields/nice_view/widgets/util.c on ZMK main).
+void canvas_draw_text(lv_obj_t *canvas, lv_coord_t x, lv_coord_t y, lv_coord_t max_w,
+                      lv_draw_label_dsc_t *draw_dsc, const char *txt);
 
 // Returns the LV_SYMBOL_* string to display for the given battery level / charging state.
 // Shared by both the central and peripheral status widgets so the thresholds stay in sync.
