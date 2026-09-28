@@ -5,7 +5,7 @@ ZMK firmware configuration for the Human Computing KB54, a split wireless keyboa
 ## Repo Layout
 
 - `config/kb54_nrf52840.keymap` — Keymap definition
-- `config/boards/humancomputing/kb54/` — Custom board definition and display widgets
+- `config/boards/humancomputing/kb54_nrf52840/` — Custom board definition and display widgets
 - `config/west.yml` — ZMK version pinned to a `main` commit SHA (set revision here)
 - `.github/workflows/build.yml` — CI build configuration (keep ZMK version in sync with west.yml)
 - `build.yaml` — Build targets and optional settings_reset entries
