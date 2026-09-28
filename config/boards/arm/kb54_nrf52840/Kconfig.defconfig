@@ -27,19 +27,83 @@ config ZMK_SPLIT
 config BT_CTLR
     default BT
 
-config ZMK_KSCAN_MATRIX_WAIT_BETWEEN_OUTPUTS
-    default 5
-
 config PINCTRL
     default y
 
-# These come from boards/shields/nice_view figure out what they're for.
+# Enable both USB and BLE
+config ZMK_USB
+    default y
+
+config ZMK_BLE
+    default y
+
+# BLE TX Power
+choice BT_CTLR_TX_PWR
+    default BT_CTLR_TX_PWR_PLUS_8
+endchoice
+
+# Enable MPU
+config ARM_MPU
+    default y
+
+# Enable GPIO
+config GPIO
+    default y
+
+# Flash configuration
+config SETTINGS
+    default y
+
+config MPU_ALLOW_FLASH_WRITE
+    default y
+
+config NVS
+    default y
+
+config SETTINGS_NVS
+    default y
+
+config FLASH
+    default y
+
+config FLASH_PAGE_LAYOUT
+    default y
+
+config FLASH_MAP
+    default y
+
+# Enable 32kHz crystal
+choice CLOCK_CONTROL_NRF_SOURCE
+    default CLOCK_CONTROL_NRF_K32SRC_XTAL
+endchoice
+
+# Battery
+config ZMK_BATTERY_REPORTING
+    default y
+
+config ZMK_BATTERY_REPORT_INTERVAL
+    default 15
+
+choice ZMK_BATTERY_REPORTING_FETCH_MODE
+    default ZMK_BATTERY_REPORTING_FETCH_MODE_STATE_OF_CHARGE
+endchoice
+
+# Display
+config ZMK_DISPLAY
+    default y
+
+config ZMK_DISPLAY_BLANK_ON_IDLE
+    default n
+
+# LVGL draw buffer size as % of the screen
 config LV_Z_VDB_SIZE
     default 100
 
+# Screen pixel density used by LVGL for scaling
 config LV_DPI_DEF
     default 161
 
+# 1-bit monochrome Sharp memory LCD
 config LV_Z_BITS_PER_PIXEL
     default 1
 
@@ -72,6 +136,13 @@ config KB54_WIDGET_STATUS
     select LV_FONT_MONTSERRAT_12
     select LV_FONT_UNSCII_8
     select LV_FONT_UNSCII_16
+
+# Code output
+config USE_DT_CODE_PARTITION
+    default y
+
+config BUILD_OUTPUT_UF2
+    default y
 
 if USB
 

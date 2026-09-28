@@ -2,12 +2,13 @@ file_format: "1"
 id: kb54_nrf52840
 name: KB54
 type: board
-url: https://kinesis-ergo.com/keyboards/advantage360
 arch: arm
 features:
   - keys
+  - display
 outputs:
   - usb
   - ble
 siblings:
   - kb54_nrf52840_l
+  - kb54_nrf52840_r

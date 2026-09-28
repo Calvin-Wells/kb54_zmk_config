@@ -157,11 +157,6 @@
     };
 };
 
-
-&ieee802154 {
-	status = "okay";
-};
-
 &gpio0 {
 	status = "okay";
 };
