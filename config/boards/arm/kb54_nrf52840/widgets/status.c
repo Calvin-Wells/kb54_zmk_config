@@ -33,7 +33,7 @@ static char profile_text_right[10] = {};
 
 static lv_draw_label_dsc_t battery_label_left;
 // Large enough for two LV_SYMBOL_* (up to ~4 bytes each) plus "L 100%  R 100%" style text.
-static char battery_text_left[32] = {};
+static char battery_text_left[40] = {};
 
 static void draw(struct zmk_widget_status *widget) {
     lv_obj_t *canvas = lv_obj_get_child(zmk_widget_status_obj(widget), 0);
