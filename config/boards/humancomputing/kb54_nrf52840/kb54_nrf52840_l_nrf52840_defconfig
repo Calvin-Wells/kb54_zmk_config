@@ -14,3 +14,7 @@ CONFIG_BT_BAS=y
 # Report both halves' battery levels to the host via the central's battery service
 CONFIG_ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_FETCHING=y
 CONFIG_ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_PROXY=y
+
+# Set here rather than Kconfig.defconfig: ZMK's Kconfig.defaults (default 60)
+# is read first and would win over a board default.
+CONFIG_ZMK_BATTERY_REPORT_INTERVAL=15

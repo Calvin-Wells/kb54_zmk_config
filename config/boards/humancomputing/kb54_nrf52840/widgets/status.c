@@ -97,6 +97,12 @@ static void draw(struct zmk_widget_status *widget) {
             snprintf(profile_text_right, sizeof(profile_text_right), "%s", LV_SYMBOL_SETTINGS);
         }
         break;
+    case ZMK_TRANSPORT_NONE:
+        profile_text_padding = 0;
+        profile_label_left.align = LV_TEXT_ALIGN_CENTER;
+        snprintf(profile_text_left, sizeof(profile_text_left), "%s", "---");
+        snprintf(profile_text_right, sizeof(profile_text_right), "%s", "");
+        break;
     }
     canvas_draw_text(canvas, profile_text_padding, CANVAS_SIZE - 32, 128, &profile_label_left,
                      profile_text_left);
