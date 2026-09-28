@@ -78,6 +78,10 @@ choice CLOCK_CONTROL_NRF_SOURCE
     default CLOCK_CONTROL_NRF_K32SRC_XTAL
 endchoice
 
+# Deep sleep support
+config ZMK_SLEEP
+    default y
+
 # Battery
 config ZMK_BATTERY_REPORTING
     default y

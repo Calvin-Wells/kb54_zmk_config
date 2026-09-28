@@ -17,18 +17,23 @@
 #include <zmk/keymap.h>
 #include <zmk/usb.h>
 
+// Note: struct zmk_peripheral_battery_state_changed and its ZMK_EVENT_DECLARE are declared
+// alongside zmk_battery_state_changed in <zmk/events/battery_state_changed.h> (already included
+// above) -- there is no separate peripheral_battery_state_changed.h header in ZMK.
+
 static sys_slist_t widgets = SYS_SLIST_STATIC_INIT(&widgets);
 
-lv_draw_label_dsc_t layer_label;
-char layer_text[20] = {};
+static lv_draw_label_dsc_t layer_label;
+static char layer_text[20] = {};
 
-lv_draw_label_dsc_t profile_label_left;
-char profile_text_left[10] = {};
-lv_draw_label_dsc_t profile_label_right;
-char profile_text_right[10] = {};
+static lv_draw_label_dsc_t profile_label_left;
+static char profile_text_left[10] = {};
+static lv_draw_label_dsc_t profile_label_right;
+static char profile_text_right[10] = {};
 
-lv_draw_label_dsc_t battery_label_left;
-char battery_text_left[10] = {};
+static lv_draw_label_dsc_t battery_label_left;
+// Large enough for two LV_SYMBOL_* (up to ~4 bytes each) plus "L 100%  R 100%" style text.
+static char battery_text_left[32] = {};
 
 static void draw(struct zmk_widget_status *widget) {
     lv_obj_t *canvas = lv_obj_get_child(zmk_widget_status_obj(widget), 0);
@@ -36,31 +41,37 @@ static void draw(struct zmk_widget_status *widget) {
 
     /////// LAYER
     if (widget->state.layer_label == NULL || strlen(widget->state.layer_label) > 12) {
-        sprintf(layer_text, "LAYER: %i", widget->state.layer_index);
+        snprintf(layer_text, sizeof(layer_text), "LAYER: %i", widget->state.layer_index);
     } else {
-        sprintf(layer_text, "LAYER: %s", widget->state.layer_label);
+        snprintf(layer_text, sizeof(layer_text), "LAYER: %s", widget->state.layer_label);
     }
     lv_canvas_draw_text(canvas, 0, 15, 128, &layer_label, layer_text);
 
     /////// Battery
-    char *battery_symbol;
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_FETCHING)
+    char left_part[16] = {};
+    char right_part[16] = {};
+
     if (widget->state.charging) {
-        battery_symbol = LV_SYMBOL_CHARGE;
+        snprintf(left_part, sizeof(left_part), "%s %i%%", LV_SYMBOL_CHARGE,
+                 widget->state.battery);
     } else {
-        uint8_t level = widget->state.battery;
-        if (level >= 95) {
-            battery_symbol = LV_SYMBOL_BATTERY_FULL;
-        } else if (level >= 65) {
-            battery_symbol = LV_SYMBOL_BATTERY_3;
-        } else if (level >= 35) {
-            battery_symbol = LV_SYMBOL_BATTERY_2;
-        } else if (level > 5) {
-            battery_symbol = LV_SYMBOL_BATTERY_1;
-        } else {
-            battery_symbol = LV_SYMBOL_BATTERY_EMPTY;
-        }
+        snprintf(left_part, sizeof(left_part), "L %i%%", widget->state.battery);
     }
-    sprintf(battery_text_left, "%s %i%%", battery_symbol, widget->state.battery);
+
+    if (widget->state.peripheral_battery_valid) {
+        snprintf(right_part, sizeof(right_part), "R %i%%", widget->state.peripheral_battery);
+    } else {
+        snprintf(right_part, sizeof(right_part), "R --");
+    }
+
+    snprintf(battery_text_left, sizeof(battery_text_left), "%s  %s", left_part, right_part);
+#else
+    const char *battery_symbol =
+        zmk_widget_battery_symbol(widget->state.battery, widget->state.charging);
+    snprintf(battery_text_left, sizeof(battery_text_left), "%s %i%%", battery_symbol,
+             widget->state.battery);
+#endif /* IS_ENABLED(CONFIG_ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_FETCHING) */
     lv_canvas_draw_text(canvas, 0, 46, 128, &battery_label_left, battery_text_left);
 
     /////// PROFILE
@@ -70,20 +81,20 @@ static void draw(struct zmk_widget_status *widget) {
     case ZMK_TRANSPORT_USB:
         profile_text_padding = 0;
         profile_label_left.align = LV_TEXT_ALIGN_CENTER;
-        sprintf(profile_text_left, "%s USB", LV_SYMBOL_USB);
-        sprintf(profile_text_right, "%s", "");
+        snprintf(profile_text_left, sizeof(profile_text_left), "%s USB", LV_SYMBOL_USB);
+        snprintf(profile_text_right, sizeof(profile_text_right), "%s", "");
         break;
     case ZMK_TRANSPORT_BLE:
-        sprintf(profile_text_left, "%s %i", LV_SYMBOL_BLUETOOTH,
-                widget->state.active_profile_index);
+        snprintf(profile_text_left, sizeof(profile_text_left), "%s %i", LV_SYMBOL_BLUETOOTH,
+                 widget->state.active_profile_index);
         if (widget->state.active_profile_bonded) {
             if (widget->state.active_profile_connected) {
-                sprintf(profile_text_right, "%s", LV_SYMBOL_OK);
+                snprintf(profile_text_right, sizeof(profile_text_right), "%s", LV_SYMBOL_OK);
             } else {
-                sprintf(profile_text_right, "%s", LV_SYMBOL_CLOSE);
+                snprintf(profile_text_right, sizeof(profile_text_right), "%s", LV_SYMBOL_CLOSE);
             }
         } else {
-            sprintf(profile_text_right, "%s", LV_SYMBOL_SETTINGS);
+            snprintf(profile_text_right, sizeof(profile_text_right), "%s", LV_SYMBOL_SETTINGS);
         }
         break;
     }
@@ -97,15 +108,32 @@ static void draw(struct zmk_widget_status *widget) {
 
 //////////////////////////////// Battery ////////////////////////////////////
 
+#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
+// ZMK only raises battery events when the percentage changes, so the charger finishing (e.g.
+// sitting at 100%) wouldn't redraw the charge icon. Re-check periodically while USB power is present.
+#define CHARGING_POLL_INTERVAL K_SECONDS(10)
+
+static void charging_poll_work_cb(struct k_work *work);
+static K_WORK_DELAYABLE_DEFINE(charging_poll_work, charging_poll_work_cb);
+#endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
+
 static void set_battery_status(struct zmk_widget_status *widget,
                                struct battery_status_state state) {
+    bool usb_present = false;
 #if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
-    widget->state.charging = state.usb_present;
+    usb_present = state.usb_present;
 #endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
+    widget->state.charging = zmk_widget_is_charging(usb_present);
 
     widget->state.battery = state.level;
 
     draw(widget);
+
+#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
+    if (usb_present) {
+        k_work_reschedule(&charging_poll_work, CHARGING_POLL_INTERVAL);
+    }
+#endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
 }
 
 static void battery_status_update_cb(struct battery_status_state state) {
@@ -131,6 +159,62 @@ ZMK_SUBSCRIPTION(widget_battery_status, zmk_battery_state_changed);
 #if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
 ZMK_SUBSCRIPTION(widget_battery_status, zmk_usb_conn_state_changed);
 #endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
+
+#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
+static void charging_poll_work_cb(struct k_work *work) {
+    widget_battery_status_refresh_state(NULL);
+    k_work_submit_to_queue(zmk_display_work_q(), &widget_battery_status_work);
+}
+#endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
+
+//////////////////////////////// Peripheral battery ////////////////////////////////////
+
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_FETCHING)
+
+struct peripheral_battery_status_state {
+    uint8_t level;
+    bool valid;
+};
+
+static void set_peripheral_battery_status(struct zmk_widget_status *widget,
+                                          struct peripheral_battery_status_state state) {
+    // The listener's init pass calls get_state(NULL) before any report has arrived; keep
+    // showing "R --" until a real one does.
+    if (!state.valid) {
+        return;
+    }
+
+    widget->state.peripheral_battery = state.level;
+    widget->state.peripheral_battery_valid = true;
+
+    draw(widget);
+}
+
+static void peripheral_battery_status_update_cb(struct peripheral_battery_status_state state) {
+    struct zmk_widget_status *widget;
+    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) {
+        set_peripheral_battery_status(widget, state);
+    }
+}
+
+static struct peripheral_battery_status_state
+peripheral_battery_status_get_state(const zmk_event_t *eh) {
+    const struct zmk_peripheral_battery_state_changed *ev =
+        as_zmk_peripheral_battery_state_changed(eh);
+
+    return (struct peripheral_battery_status_state){
+        .level = (ev != NULL) ? ev->state_of_charge : 0,
+        .valid = (ev != NULL),
+    };
+}
+
+ZMK_DISPLAY_WIDGET_LISTENER(widget_peripheral_battery_status,
+                            struct peripheral_battery_status_state,
+                            peripheral_battery_status_update_cb,
+                            peripheral_battery_status_get_state)
+ZMK_SUBSCRIPTION(widget_peripheral_battery_status, zmk_peripheral_battery_state_changed);
+
+#endif /* IS_ENABLED(CONFIG_ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_FETCHING) */
 
 //////////////////////////////// Profiles ////////////////////////////////////
 
@@ -214,7 +298,13 @@ int zmk_widget_status_init(struct zmk_widget_status *widget, lv_obj_t *parent) {
     lv_draw_label_dsc_init(&battery_label_left);
     battery_label_left.color = lv_color_black();
     battery_label_left.align = LV_TEXT_ALIGN_CENTER;
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_FETCHING)
+    // The combined "L xx%  R xx%" text is wider than a single battery readout, so use a smaller
+    // font to keep it within the 128px canvas width.
+    battery_label_left.font = &lv_font_montserrat_14;
+#else
     battery_label_left.font = &lv_font_montserrat_22;
+#endif /* IS_ENABLED(CONFIG_ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_FETCHING) */
 
     // Profile.
     lv_draw_label_dsc_init(&profile_label_left);
@@ -230,6 +320,9 @@ int zmk_widget_status_init(struct zmk_widget_status *widget, lv_obj_t *parent) {
     widget_layer_status_init();
     widget_battery_status_init();
     widget_output_status_init();
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_FETCHING)
+    widget_peripheral_battery_status_init();
+#endif /* IS_ENABLED(CONFIG_ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_FETCHING) */
 
     return 0;
 }

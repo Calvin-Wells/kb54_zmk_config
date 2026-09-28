@@ -17,41 +17,27 @@
 
 static sys_slist_t widgets = SYS_SLIST_STATIC_INIT(&widgets);
 
-lv_draw_label_dsc_t connection_label;
-char connection_text[10] = {};
+static lv_draw_label_dsc_t connection_label;
+static char connection_text[10] = {};
 
-lv_draw_label_dsc_t battery_label_left;
-char battery_text_left[10] = {};
+static lv_draw_label_dsc_t battery_label_left;
+static char battery_text_left[10] = {};
 
 static void draw(struct zmk_widget_status *widget) {
     lv_obj_t *canvas = lv_obj_get_child(zmk_widget_status_obj(widget), 0);
     lv_canvas_fill_bg(canvas, lv_color_white(), LV_OPA_COVER);
 
     /////// Battery
-    char *battery_symbol;
-    if (widget->state.charging) {
-        battery_symbol = LV_SYMBOL_CHARGE;
-    } else {
-        uint8_t level = widget->state.battery;
-        if (level >= 95) {
-            battery_symbol = LV_SYMBOL_BATTERY_FULL;
-        } else if (level >= 65) {
-            battery_symbol = LV_SYMBOL_BATTERY_3;
-        } else if (level >= 35) {
-            battery_symbol = LV_SYMBOL_BATTERY_2;
-        } else if (level > 5) {
-            battery_symbol = LV_SYMBOL_BATTERY_1;
-        } else {
-            battery_symbol = LV_SYMBOL_BATTERY_EMPTY;
-        }
-    }
-    sprintf(battery_text_left, "%s %i%%", battery_symbol, widget->state.battery);
+    const char *battery_symbol =
+        zmk_widget_battery_symbol(widget->state.battery, widget->state.charging);
+    snprintf(battery_text_left, sizeof(battery_text_left), "%s %i%%", battery_symbol,
+             widget->state.battery);
     lv_canvas_draw_text(canvas, 0, 46, 128, &battery_label_left, battery_text_left);
 
     /////// PROFILE
-    sprintf(connection_text, "%s",
-            widget->state.connected ? (LV_SYMBOL_BLUETOOTH " " LV_SYMBOL_OK)
-                                    : (LV_SYMBOL_BLUETOOTH " " LV_SYMBOL_CLOSE));
+    snprintf(connection_text, sizeof(connection_text), "%s",
+             widget->state.connected ? (LV_SYMBOL_BLUETOOTH " " LV_SYMBOL_OK)
+                                     : (LV_SYMBOL_BLUETOOTH " " LV_SYMBOL_CLOSE));
     lv_canvas_draw_text(canvas, 0, CANVAS_SIZE - 32, 128, &connection_label, connection_text);
 
     rotate_canvas(canvas, widget->cbuf);
@@ -59,15 +45,32 @@ static void draw(struct zmk_widget_status *widget) {
 
 //////////////////////////////// Battery ////////////////////////////////////
 
+#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
+// ZMK only raises battery events when the percentage changes, so the charger finishing (e.g.
+// sitting at 100%) wouldn't redraw the charge icon. Re-check periodically while USB power is present.
+#define CHARGING_POLL_INTERVAL K_SECONDS(10)
+
+static void charging_poll_work_cb(struct k_work *work);
+static K_WORK_DELAYABLE_DEFINE(charging_poll_work, charging_poll_work_cb);
+#endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
+
 static void set_battery_status(struct zmk_widget_status *widget,
                                struct battery_status_state state) {
+    bool usb_present = false;
 #if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
-    widget->state.charging = state.usb_present;
+    usb_present = state.usb_present;
 #endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
+    widget->state.charging = zmk_widget_is_charging(usb_present);
 
     widget->state.battery = state.level;
 
     draw(widget);
+
+#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
+    if (usb_present) {
+        k_work_reschedule(&charging_poll_work, CHARGING_POLL_INTERVAL);
+    }
+#endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
 }
 
 static void battery_status_update_cb(struct battery_status_state state) {
@@ -92,6 +95,13 @@ ZMK_DISPLAY_WIDGET_LISTENER(widget_battery_status, struct battery_status_state,
 ZMK_SUBSCRIPTION(widget_battery_status, zmk_battery_state_changed);
 #if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
 ZMK_SUBSCRIPTION(widget_battery_status, zmk_usb_conn_state_changed);
+#endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
+
+#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
+static void charging_poll_work_cb(struct k_work *work) {
+    widget_battery_status_refresh_state(NULL);
+    k_work_submit_to_queue(zmk_display_work_q(), &widget_battery_status_work);
+}
 #endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
 
 //////////////////////////////// Peripheral status ////////////////////////////////////

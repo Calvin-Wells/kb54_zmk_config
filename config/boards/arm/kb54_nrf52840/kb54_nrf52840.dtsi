@@ -54,6 +54,7 @@
 
 	kscan0: kscan {
 		compatible = "zmk,kscan-gpio-direct";
+		wakeup-source;
 		input-gpios
 		= <&gpio1 1 GPIO_ACTIVE_LOW> // 1
 		, <&gpio1 2 GPIO_ACTIVE_LOW> // 2
