@@ -16,6 +16,36 @@
 #define THUMBS 48 49 50 51 52 53
 
 / {
+        behaviors {
+                // Unused
+                // "Timeless" home row mods: balanced flavor with require-prior-idle-ms
+                // so fast typing resolves to taps, and positional hold-trigger-key-positions
+                // (evaluated on release) so same-hand combinations of mods still work.
+                hml: home_row_mod_left {
+                        compatible = "zmk,behavior-hold-tap";
+                        #binding-cells = <2>;
+                        flavor = "balanced";
+                        tapping-term-ms = <280>;
+                        quick-tap-ms = <175>;
+                        require-prior-idle-ms = <150>;
+                        bindings = <&kp>, <&kp>;
+                        hold-trigger-key-positions = <KEYS_R THUMBS>;
+                        hold-trigger-on-release;
+                };
+
+                hmr: home_row_mod_right {
+                        compatible = "zmk,behavior-hold-tap";
+                        #binding-cells = <2>;
+                        flavor = "balanced";
+                        tapping-term-ms = <280>;
+                        quick-tap-ms = <175>;
+                        require-prior-idle-ms = <150>;
+                        bindings = <&kp>, <&kp>;
+                        hold-trigger-key-positions = <KEYS_L THUMBS>;
+                        hold-trigger-on-release;
+                };
+        };
+
         conditional_layers {
                 compatible = "zmk,conditional-layers";
                 tri_layer {
