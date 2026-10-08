@@ -23,7 +23,22 @@ include:
     cmake-args: -DCONFIG_ZMK_STUDIO=y
   - board: kb54_nrf52840_r
 # Uncomment the following lines to generate the settings reset firmware images
+  # - board: kb54_nrf52840_l
+  #   shield: settings_reset
+  # - board: kb54_nrf52840_r
+  #   shield: settings_reset
+
+# Temporary debug builds: the left half doesn't boot on ZMK main. Each changes
+# one thing from the normal left build to narrow down the cause.
   - board: kb54_nrf52840_l
-    shield: settings_reset
-  - board: kb54_nrf52840_r
-    shield: settings_reset
+    snippet: studio-rpc-usb-uart
+    cmake-args: -DCONFIG_ZMK_STUDIO=y -DCONFIG_ZMK_DISPLAY=n
+    artifact-name: debug1-no-display-kb54_nrf52840_l
+  - board: kb54_nrf52840_l
+    snippet: studio-rpc-usb-uart
+    cmake-args: -DCONFIG_ZMK_STUDIO=y -DCONFIG_ZMK_DISPLAY_STATUS_SCREEN_BUILT_IN=y
+    artifact-name: debug2-builtin-screen-kb54_nrf52840_l
+  - board: kb54_nrf52840_l
+    snippet: studio-rpc-usb-uart
+    cmake-args: -DCONFIG_ZMK_STUDIO=y -DCONFIG_LV_Z_MEM_POOL_SIZE=32768 -DCONFIG_ZMK_DISPLAY_DEDICATED_THREAD_STACK_SIZE=8192
+    artifact-name: debug3-more-lvgl-memory-kb54_nrf52840_l
