@@ -23,7 +23,7 @@ include:
     cmake-args: -DCONFIG_ZMK_STUDIO=y
   - board: kb54_nrf52840_r
 # Uncomment the following lines to generate the settings reset firmware images
-  # - board: kb54_nrf52840_l
-  #   shield: settings_reset
-  # - board: kb54_nrf52840_r
-  #   shield: settings_reset
+  - board: kb54_nrf52840_l
+    shield: settings_reset
+  - board: kb54_nrf52840_r
+    shield: settings_reset
