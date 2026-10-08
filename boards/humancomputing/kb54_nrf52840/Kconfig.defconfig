@@ -113,8 +113,10 @@ choice ZMK_DISPLAY_STATUS_SCREEN
     default ZMK_DISPLAY_STATUS_SCREEN_CUSTOM
 endchoice
 
+# LVGL 9 needs far more heap than LVGL 8 for the custom 128x128 canvas widget;
+# 8192 (nice!view's value) runs out and the firmware halts before USB starts.
 config LV_Z_MEM_POOL_SIZE
-    default 8192 if ZMK_DISPLAY_STATUS_SCREEN_CUSTOM
+    default 32768 if ZMK_DISPLAY_STATUS_SCREEN_CUSTOM
 
 config ZMK_DISPLAY_STATUS_SCREEN_CUSTOM
     imply KB54_WIDGET_STATUS
