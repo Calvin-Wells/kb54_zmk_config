@@ -1,3 +1,4 @@
+#include "screensaver.h"
 #include "status.h"
 #include "util.h"
 
@@ -25,6 +26,13 @@ static char battery_text_left[10] = {};
 
 static void draw(struct zmk_widget_status *widget) {
     lv_obj_t *canvas = lv_obj_get_child(zmk_widget_status_obj(widget), 0);
+
+    if (zmk_widget_screensaver_active()) {
+        zmk_widget_screensaver_draw(canvas);
+        rotate_canvas(canvas);
+        return;
+    }
+
     lv_canvas_fill_bg(canvas, lv_color_white(), LV_OPA_COVER);
 
     /////// Battery
@@ -126,6 +134,13 @@ ZMK_DISPLAY_WIDGET_LISTENER(widget_peripheral_status, struct peripheral_status_s
                             output_status_update_cb, get_state)
 ZMK_SUBSCRIPTION(widget_peripheral_status, zmk_split_peripheral_status_changed);
 
+//////////////////////////////// Screensaver ////////////////////////////////////
+
+void zmk_widget_screensaver_changed(void) {
+    struct zmk_widget_status *widget;
+    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { draw(widget); }
+}
+
 //////////////////////////////// Initialization ////////////////////////////////////
 
 int zmk_widget_status_init(struct zmk_widget_status *widget, lv_obj_t *parent) {
@@ -152,6 +167,7 @@ int zmk_widget_status_init(struct zmk_widget_status *widget, lv_obj_t *parent) {
     sys_slist_append(&widgets, &widget->node);
     widget_peripheral_status_init();
     widget_battery_status_init();
+    zmk_widget_screensaver_init();
 
     return 0;
 }
